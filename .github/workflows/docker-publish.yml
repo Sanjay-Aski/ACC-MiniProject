@@ -33,5 +33,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            YOUR_DOCKERHUB_USERNAME/my-app:latest
-            YOUR_DOCKERHUB_USERNAME/my-app:${{ github.sha }}
+            sanjayaski/my-app:latest
+            sanjayaski/my-app:${{ github.sha }}
