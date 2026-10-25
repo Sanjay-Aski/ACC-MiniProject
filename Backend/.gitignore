@@ -1,0 +1,24 @@
+# Secrets and environment-specific local configuration
+local.settings.json
+.env
+.env.*
+!.env.example
+
+# Python environments and caches
+.venv/
+venv/
+myenv/
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+*.py[cod]
+
+# Local test artifacts
+report*.json
+output*.txt
+*.report.json
+deployment-summary.json
+
+# IDE
+.vscode/
+.idea/

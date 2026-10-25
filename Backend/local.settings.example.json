@@ -1,0 +1,19 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "SERVICEBUS_QUEUE": "dedup-ingestion",
+    "ServiceBusConnection__fullyQualifiedNamespace": "<namespace>.servicebus.windows.net",
+    "SQL_SERVER": "<server>.database.windows.net",
+    "SQL_DATABASE": "<database>",
+    "SQL_AUTH_MODE": "ActiveDirectoryDefault",
+    "REDIS_HOST": "<cache-host>.westus.redis.azure.net",
+    "REDIS_PORT": "10000",
+    "WINDOW_SECONDS": "3600",
+    "BUCKET_SECONDS": "300",
+    "BLOOM_CAPACITY_PER_BUCKET": "10000",
+    "BLOOM_FALSE_POSITIVE_RATE": "0.01",
+    "MAX_RECORDS_PER_REQUEST": "100"
+  }
+}

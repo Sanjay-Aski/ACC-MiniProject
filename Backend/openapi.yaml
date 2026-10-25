@@ -1,0 +1,166 @@
+openapi: 3.0.3
+info:
+  title: Azure Deduplication Virtual Lab API
+  version: 1.0.0
+  description: Async ingestion with event-by-event progress for a virtual pipeline frontend.
+servers:
+  - url: https://{functionHost}/api
+    description: Use the exact defaultHostName from deployment-summary.json; Flex Consumption hostnames may include a generated suffix.
+    variables:
+      functionHost:
+        default: your-function-host.azurewebsites.net
+        description: Full Azure Functions host name without the https scheme.
+security:
+  - FunctionKey: []
+components:
+  securitySchemes:
+    FunctionKey:
+      type: apiKey
+      in: header
+      name: x-functions-key
+  schemas:
+    IngestRequest:
+      type: object
+      required: [records]
+      properties:
+        testRunId: { type: string, format: uuid, description: Stable UUID reused across chunked requests. }
+        expectedCount: { type: integer, minimum: 1, description: Total number of input records for the complete run. }
+        lineNumberStart: { type: integer, minimum: 1, default: 1 }
+        records:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            oneOf:
+              - type: string
+                description: Exact text line; text comparison preserves whitespace.
+              - type: object
+                description: JSON payload, or wrapper {payload, lineNumber, recordId}.
+              - type: number
+              - type: boolean
+              - type: "null"
+    IngestResponse:
+      type: object
+      properties:
+        testRunId: { type: string, format: uuid }
+        requestId: { type: string, format: uuid }
+        status: { type: string, enum: [queued, queue_failed] }
+        recordsSubmitted: { type: integer }
+        recordsNewlyQueued: { type: integer }
+        statusUrl: { type: string }
+        eventsUrl: { type: string }
+        outputUrl: { type: string }
+    PipelineEvent:
+      type: object
+      properties:
+        eventId: { type: integer, format: int64 }
+        testRunId: { type: string, format: uuid }
+        recordId: { type: string, format: uuid, nullable: true }
+        stage: { type: string }
+        status: { type: string }
+        detail: { type: object, additionalProperties: true }
+        occurredAt: { type: string, format: date-time }
+        visualNode: { type: string }
+paths:
+  /health:
+    get:
+      summary: Check SQL, Redis and Service Bus readiness
+      responses:
+        '200': { description: SQL and Service Bus ready; Redis may be degraded but falls back to SQL. }
+        '503': { description: SQL or Service Bus unavailable. }
+  /ingest:
+    post:
+      summary: Submit records asynchronously
+      description: Registers records, emits stage events, then queues messages. At most 100 records per request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IngestRequest' }
+      responses:
+        '202':
+          description: Records accepted for asynchronous processing.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IngestResponse' }
+        '400': { description: Invalid request. }
+        '413': { description: Too many records. }
+        '503': { description: Queue send failed; retry with the same testRunId and line numbers. }
+  /test-status:
+    get:
+      summary: Get run counters and progress
+      parameters:
+        - in: query
+          name: testRunId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Expected, submitted, queued, accepted, duplicate, failed, pending counts and stage summaries. }
+        '404': { description: Run not found. }
+  /test-events:
+    get:
+      summary: Poll persisted message-stage events for animation
+      parameters:
+        - in: query
+          name: testRunId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: afterEventId
+          schema: { type: integer, format: int64, default: 0 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+      responses:
+        '200':
+          description: Events ordered by monotonically increasing eventId.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  testRunId: { type: string, format: uuid }
+                  events:
+                    type: array
+                    items: { $ref: '#/components/schemas/PipelineEvent' }
+                  nextAfterEventId: { type: integer, format: int64 }
+                  hasMore: { type: boolean }
+  /test-record:
+    get:
+      summary: Inspect one record's fingerprint, final decision and persisted timeline
+      parameters:
+        - in: query
+          name: testRunId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: recordId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: includePayload
+          schema: { type: boolean, default: false }
+      responses:
+        '200': { description: Selected record and ordered timeline. Payload is excluded unless explicitly requested. }
+        '404': { description: Record not found in the specified test run. }
+  /test-output:
+    get:
+      summary: Download accepted lines for one test run
+      parameters:
+        - in: query
+          name: testRunId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: UTF-8 text/plain attachment containing records accepted in this run only.
+          content:
+            text/plain:
+              schema: { type: string }
+        '404': { description: Run not found. }
+        '409': { description: Test run is still processing; wait for test-status to report completed. }
+  /lab/overview:
+    get:
+      summary: Current backend overview for the virtual-lab dashboard
+      responses:
+        '200': { description: Recent run counts, dependency status, queue runtime properties and recent runs. }

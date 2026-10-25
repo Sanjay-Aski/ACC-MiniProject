@@ -1,0 +1,25 @@
+// Unique and duplicate SQL decisions recorded in Application Insights traces.
+traces
+| where timestamp > ago(24h)
+| where message has "dedup_result"
+| project timestamp, message, severityLevel, operation_Id
+| order by timestamp desc
+
+// Errors and retries from the worker.
+traces
+| where timestamp > ago(24h)
+| where severityLevel >= 3 or message has_any ("failed", "fallback", "deadletter")
+| project timestamp, severityLevel, message, operation_Id
+| order by timestamp desc
+
+// Function failures and exceptions.
+exceptions
+| where timestamp > ago(24h)
+| project timestamp, type, outerMessage, operation_Name, operation_Id
+| order by timestamp desc
+
+// HTTP endpoint request rates and failures.
+requests
+| where timestamp > ago(24h)
+| summarize requests=count(), failed=countif(success == false), p95Duration=percentile(duration, 95) by name, bin(timestamp, 5m)
+| order by timestamp desc

@@ -1,0 +1,10 @@
+{
+  "testRunId": "51f88be4-d81e-4f11-8e8f-722f5fa69e0c",
+  "expectedCount": 4,
+  "records": [
+    {"lineNumber": 1, "payload": {"event_name": "payment_failure", "user_id": "u-10", "transaction_id": "tx-1", "timestamp": "2026-10-25T10:00:00Z"}},
+    {"lineNumber": 2, "payload": {"event_name": "payment_failed", "user_id": "u-10", "transaction_id": "tx-1", "timestamp": "2026-10-25T10:01:00Z"}},
+    {"lineNumber": 3, "payload": {"event_name": "order_created", "user_id": "u-20", "order_id": "o-1", "timestamp": "2026-10-25T10:02:00Z"}},
+    {"lineNumber": 4, "payload": {"event_name": "order_created", "user_id": "u-20", "order_id": "o-1", "timestamp": "2026-10-25T10:04:00Z", "note": "ignored for order identity"}}
+  ]
+}
